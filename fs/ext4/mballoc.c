@@ -1958,7 +1958,8 @@ void ext4_mb_complex_scan_group(struct ext4_allocation_context *ac,
 	int free;
 
 	free = e4b->bd_info->bb_free;
-	BUG_ON(free <= 0);
+	if (WARN_ON(free <= 0))
+		return;
 
 	i = e4b->bd_info->bb_first_free;
 
@@ -1979,7 +1980,8 @@ void ext4_mb_complex_scan_group(struct ext4_allocation_context *ac,
 		}
 
 		mb_find_extent(e4b, i, ac->ac_g_ex.fe_len, &ex);
-		BUG_ON(ex.fe_len <= 0);
+		if (WARN_ON(ex.fe_len <= 0))
+			break;
 		if (free < ex.fe_len) {
 			ext4_grp_locked_error(sb, e4b->bd_group, 0, 0,
 					"%d free clusters as per "
@@ -4586,9 +4588,6 @@ ext4_fsblk_t ext4_mb_new_blocks(handle_t *handle,
 	/* Allow to use superuser reservation for quota file */
 	if (IS_NOQUOTA(ar->inode))
 		ar->flags |= EXT4_MB_USE_ROOT_BLOCKS;
-
-	if (ext4_test_inode_flag(ar->inode, EXT4_INODE_CORE_FILE))
-		ar->flags |= EXT4_MB_USE_EXTRA_ROOT_BLOCKS;
 
 	if ((ar->flags & EXT4_MB_DELALLOC_RESERVED) == 0) {
 		/* Without delayed allocation we need to verify

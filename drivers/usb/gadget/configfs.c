@@ -559,7 +559,7 @@ static int config_usb_cfg_link(
 				i = 0;
 				list_for_each_entry(cn, &cfg->string_list, list) {
 					i++;
-					if (strcmp(cn->configuration, "Conf 1")!= 0) {
+					if (strcmp(cn->configuration, "Conf 1")!= 0) {	
 						if (strcmp(cn->configuration, "adb") == 0) {
 							printk("usb: %s : make adb setting for gsi test \n",__func__);
 								list_for_each_entry_safe(f, tmp, &cfg->func_list, list) {
@@ -572,7 +572,7 @@ static int config_usb_cfg_link(
 								cfg->c.next_interface_id = 0;
 							}
 						}
-					}
+					} 
 				}
 #endif
 			ret = -EEXIST;
@@ -614,16 +614,28 @@ static int config_usb_cfg_link(
 			i = 0;
 			list_for_each_entry(cn, &cfg->string_list, list) {
 				i++;
-				if (strcmp(cn->configuration, "Conf 1")!= 0) {
-					if (strcmp(cn->configuration, "adb") == 0) {
+				if (strcmp(cn->configuration, "Conf 1")!= 0) {			
+					if (strcmp(cn->configuration, "adb") == 0) {				
 						list_for_each_entry_safe(f, tmp, &gi->linked_func, list) {
 							if (strcmp(f->name , "adb") == 0) {
+								gi->gsi_boot=1;
 								printk("usb: %s: GSI adb works(%s)\n",__func__, f->name);
 								list_move_tail(&f->list, &cfg->func_list);
 							}
 						}
 					}
-					gi->gsi_boot=1;
+					if (!gi->gsi_boot) {
+						printk("usb: %s: Recovery ADB\n",__func__);
+						f = usb_get_function(fi);
+						if (IS_ERR(f)) {
+							ret = PTR_ERR(f);
+							goto out;
+						}
+
+						/* stash the function until we bind it to the gadget */
+						list_add_tail(&f->list, &cfg->func_list);
+						gi->gsi_boot=1;
+					}
 					ret = 0;
 					goto out;
 				} else {
@@ -1641,7 +1653,7 @@ static void android_work(struct work_struct *data)
 	if (!android_device && IS_ERR(android_device)) {
 		pr_info("usb: cannot send uevent because android_device not available \n");
 		return;
-	}
+	}	
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (cdev->config)
 		status[1] = true;
@@ -2001,7 +2013,7 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 		cdev->next_string_id = 0;
 #endif
 		if (!gadget) {
-			pr_info("usb: %s: Gadget is NULL: %p\n", __func__, gadget);
+			pr_info("usb: %s: Gadget is NULL\n", __func__);
 			mutex_unlock(&dev->lock);
 			return -ENODEV;
 		}
@@ -2207,7 +2219,7 @@ static struct config_group *gadgets_make(
 	if (android_device_create(gi) < 0) {
 		kfree(gi->composite.gadget_driver.function);
 		goto err;
-	}
+	}	
 
 	return &gi->group;
 

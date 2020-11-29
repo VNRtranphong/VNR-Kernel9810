@@ -354,7 +354,8 @@ static void save_error_info(struct super_block *sb, const char *func,
 		return;
 
 	__save_error_info(sb, func, line);
-	ext4_commit_super(sb, 1);
+	if (!bdev_read_only(sb->s_bdev))
+		ext4_commit_super(sb, 1);
 }
 
 /*
@@ -1125,20 +1126,11 @@ static struct inode *ext4_nfs_get_inode(struct super_block *sb,
 {
 	struct inode *inode;
 
-	if (ino < EXT4_FIRST_INO(sb) && ino != EXT4_ROOT_INO)
-		return ERR_PTR(-ESTALE);
-	if (ino > le32_to_cpu(EXT4_SB(sb)->s_es->s_inodes_count))
-		return ERR_PTR(-ESTALE);
-
-	/* iget isn't really right if the inode is currently unallocated!!
-	 *
-	 * ext4_read_inode will return a bad_inode if the inode had been
-	 * deleted, so we should be safe.
-	 *
+	/*
 	 * Currently we don't know the generation for parent directory, so
 	 * a generation of 0 means "accept any"
 	 */
-	inode = ext4_iget_normal(sb, ino);
+	inode = ext4_iget(sb, ino, EXT4_IGET_HANDLE);
 	if (IS_ERR(inode))
 		return ERR_CAST(inode);
 	if (generation && inode->i_generation != generation) {
@@ -1662,8 +1654,8 @@ static const struct mount_opts {
 	{Opt_noquota, (EXT4_MOUNT_QUOTA | EXT4_MOUNT_USRQUOTA |
 		       EXT4_MOUNT_GRPQUOTA | EXT4_MOUNT_PRJQUOTA),
 							MOPT_CLEAR | MOPT_Q},
-	{Opt_usrjquota, 0, MOPT_Q},
-	{Opt_grpjquota, 0, MOPT_Q},
+	{Opt_usrjquota, 0, MOPT_Q | MOPT_STRING},
+	{Opt_grpjquota, 0, MOPT_Q | MOPT_STRING},
 	{Opt_offusrjquota, 0, MOPT_Q},
 	{Opt_offgrpjquota, 0, MOPT_Q},
 	{Opt_jqfmt_vfsold, QFMT_VFS_OLD, MOPT_QFMT},
@@ -3428,7 +3420,8 @@ int ext4_calculate_overhead(struct super_block *sb)
 	 */
 	if (sbi->s_journal && !sbi->journal_bdev)
 		overhead += EXT4_NUM_B2C(sbi, sbi->s_journal->j_maxlen);
-	else if (ext4_has_feature_journal(sb) && !sbi->s_journal) {
+	else if (ext4_has_feature_journal(sb) && !sbi->s_journal && j_inum) {
+		/* j_inum for internal journal is non-zero */
 		j_inode = ext4_get_journal_inode(sb, j_inum);
 		if (j_inode) {
 			j_blocks = j_inode->i_size >> sb->s_blocksize_bits;
@@ -3908,7 +3901,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	if (sbi->s_inodes_per_group < sbi->s_inodes_per_block ||
 	    sbi->s_inodes_per_group > blocksize * 8) {
 		ext4_msg(sb, KERN_ERR, "invalid inodes per group: %lu\n",
-			 sbi->s_blocks_per_group);
+			 sbi->s_inodes_per_group);
 		goto failed_mount;
 	}
 	sbi->s_itb_per_group = sbi->s_inodes_per_group /
@@ -4039,9 +4032,9 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 			EXT4_BLOCKS_PER_GROUP(sb) - 1);
 	do_div(blocks_count, EXT4_BLOCKS_PER_GROUP(sb));
 	if (blocks_count > ((uint64_t)1<<32) - EXT4_DESC_PER_BLOCK(sb)) {
-		ext4_msg(sb, KERN_WARNING, "groups count too large: %u "
+		ext4_msg(sb, KERN_WARNING, "groups count too large: %llu "
 		       "(block count %llu, first data block %u, "
-		       "blocks per group %lu)", sbi->s_groups_count,
+		       "blocks per group %lu)", blocks_count,
 		       ext4_blocks_count(es),
 		       le32_to_cpu(es->s_first_data_block),
 		       EXT4_BLOCKS_PER_GROUP(sb));
@@ -4272,16 +4265,11 @@ no_journal:
 				ext4_r_blocks_count(es) >> sbi->s_cluster_bits);
 	}
 
-	if (ext4_sec_r_blocks_count(es))
-		ext4_msg(sb, KERN_INFO, "SEC reserved blocks %llu",
-				ext4_sec_r_blocks_count(es) >>
-				sbi->s_cluster_bits);
-
 	if (le32_to_cpu(es->s_sec_magic) == EXT4_SEC_DATA_MAGIC ||
 			strncmp(es->s_volume_name, "data", 4) == 0) {
 		sbi->s_r_inodes_count = EXT4_DEF_RESERVE_INODE;
 		ext4_msg(sb, KERN_INFO, "Reserve inodes (%d/%u)",
-			EXT4_DEF_RESERVE_INODE * 2,
+			EXT4_DEF_RESERVE_INODE,
 			le32_to_cpu(es->s_inodes_count));
 	}
 
@@ -4302,7 +4290,7 @@ no_journal:
 	 * so we can safely mount the rest of the filesystem now.
 	 */
 
-	root = ext4_iget(sb, EXT4_ROOT_INO);
+	root = ext4_iget(sb, EXT4_ROOT_INO, EXT4_IGET_SPECIAL);
 	if (IS_ERR(root)) {
 		ext4_msg(sb, KERN_ERR, "get root inode failed");
 		ret = PTR_ERR(root);
@@ -4446,6 +4434,7 @@ cantfind_ext4:
 #ifdef CONFIG_QUOTA
 failed_mount8:
 	ext4_unregister_sysfs(sb);
+	kobject_put(&sbi->s_kobj);
 #endif
 failed_mount7:
 	ext4_unregister_li_request(sb);
@@ -4570,7 +4559,7 @@ static struct inode *ext4_get_journal_inode(struct super_block *sb,
 	 * happen if we iget() an unused inode, as the subsequent iput()
 	 * will try to delete it.
 	 */
-	journal_inode = ext4_iget(sb, journal_inum);
+	journal_inode = ext4_iget(sb, journal_inum, EXT4_IGET_SPECIAL);
 	if (IS_ERR(journal_inode)) {
 		ext4_msg(sb, KERN_ERR, "no journal found");
 		return NULL;
@@ -4809,13 +4798,6 @@ static int ext4_commit_super(struct super_block *sb, int sync)
 	int error = 0;
 
 	if (!sbh || block_device_ejected(sb))
-		return error;
-
-	/*
-	 * The superblock bh should be mapped, but it might not be if the
-	 * device was hot-removed. Not much we can do but fail the I/O.
-	 */
-	if (!buffer_mapped(sbh))
 		return error;
 
 	if (unlikely(le16_to_cpu(es->s_magic) != EXT4_SUPER_MAGIC)) {
@@ -5399,10 +5381,8 @@ static int ext4_statfs(struct dentry *dentry, struct kstatfs *buf)
 	/* prevent underflow in case that few free space is available */
 	buf->f_bfree = EXT4_C2B(sbi, max_t(s64, bfree, 0));
 	buf->f_bavail = buf->f_bfree -
-			(ext4_r_blocks_count(es) + resv_blocks +
-			 ext4_sec_r_blocks_count(es));
-	if (buf->f_bfree < (ext4_r_blocks_count(es) + resv_blocks +
-				ext4_sec_r_blocks_count(es)))
+			(ext4_r_blocks_count(es) + resv_blocks);
+	if (buf->f_bfree < (ext4_r_blocks_count(es) + resv_blocks))
 		buf->f_bavail = 0;
 	buf->f_files = le32_to_cpu(es->s_inodes_count);
 	buf->f_ffree = percpu_counter_sum_positive(&sbi->s_freeinodes_counter);
@@ -5559,6 +5539,11 @@ static int ext4_quota_on(struct super_block *sb, int type, int format_id,
 	/* Quotafile not on the same filesystem? */
 	if (path->dentry->d_sb != sb)
 		return -EXDEV;
+
+	/* Quota already enabled for this file? */
+	if (IS_NOQUOTA(d_inode(path->dentry)))
+		return -EBUSY;
+
 	/* Journaling quota? */
 	if (EXT4_SB(sb)->s_qf_names[type]) {
 		/* Quotafile not in fs root? */
@@ -5608,7 +5593,7 @@ static int ext4_quota_enable(struct super_block *sb, int type, int format_id,
 	if (!qf_inums[type])
 		return -EPERM;
 
-	qf_inode = ext4_iget(sb, qf_inums[type]);
+	qf_inode = ext4_iget(sb, qf_inums[type], EXT4_IGET_SPECIAL);
 	if (IS_ERR(qf_inode)) {
 		ext4_error(sb, "Bad quota inode # %lu", qf_inums[type]);
 		return PTR_ERR(qf_inode);

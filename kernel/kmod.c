@@ -28,6 +28,7 @@
 #include <linux/cred.h>
 #include <linux/file.h>
 #include <linux/fdtable.h>
+#include <linux/fs_struct.h>
 #include <linux/workqueue.h>
 #include <linux/security.h>
 #include <linux/mount.h>
@@ -42,6 +43,10 @@
 #include <asm/uaccess.h>
 
 #include <trace/events/module.h>
+
+#ifdef CONFIG_SECURITY_DEFEX
+#include <linux/defex.h>
+#endif
 
 extern int max_threads;
 
@@ -119,7 +124,7 @@ out:
  * invoke it.
  *
  * If module auto-loading support is disabled then this function
- * becomes a no-operation.
+ * simply returns -ENOENT.
  */
 int __request_module(bool wait, const char *fmt, ...)
 {
@@ -140,7 +145,7 @@ int __request_module(bool wait, const char *fmt, ...)
 	WARN_ON_ONCE(wait && current_is_async());
 
 	if (!modprobe_path[0])
-		return 0;
+		return -ENOENT;
 
 	va_start(args, fmt);
 	ret = vsnprintf(module_name, MODULE_NAME_LEN, fmt, args);
@@ -221,6 +226,14 @@ static int call_usermodehelper_exec_async(void *data)
 	spin_lock_irq(&current->sighand->siglock);
 	flush_signal_handlers(current, 1);
 	spin_unlock_irq(&current->sighand->siglock);
+
+	/*
+	 * Initial kernel threads share ther FS with init, in order to
+	 * get the init root directory. But we've now created a new
+	 * thread that is going to execve a user process and has its own
+	 * 'struct fs_struct'. Reset umask to the default.
+	 */
+	current->fs->umask = 0022;
 
 	/*
 	 * Our parent (unbound workqueue) runs with elevated scheduling
@@ -566,6 +579,13 @@ int call_usermodehelper_exec(struct subprocess_info *sub_info, int wait)
 		retval = -EBUSY;
 		goto out;
 	}
+
+#if defined(CONFIG_SECURITY_DEFEX) && ANDROID_VERSION >= 100000 /* Over Q in case of Exynos */
+	if (task_defex_user_exec(sub_info->path)) {
+		goto out;
+	}
+#endif
+
 	/*
 	 * Set the completion pointer only if there is a waiter.
 	 * This makes it possible to use umh_complete to free

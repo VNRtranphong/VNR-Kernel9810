@@ -1,11 +1,17 @@
 /**
- * Copyright (C) ARM Limited 2010-2016. All rights reserved.
+ * Copyright (C) Arm Limited 2010-2016. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  *
  */
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0))
+#define GATOR_ACCESS_OK(type, addr, size)           access_ok((type), (addr), (size))
+#else
+#define GATOR_ACCESS_OK(type, addr, size)           access_ok((addr), (size))
+#endif
 
 #if defined(__arm__) || defined(__aarch64__)
 #define GATOR_KERNEL_UNWINDING                      1
@@ -16,7 +22,7 @@
 #endif
 
 /* on 4.10 walk_stackframe was unexported so use save_stack_trace instead */
-#if defined(MODULE) && defined(__aarch64__) && ((LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)) || defined(CONFIG_THREAD_INFO_IN_TASK))
+#if defined(MODULE) && defined(__aarch64__) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0))
 #define GATOR_KERNEL_UNWINDING_USE_WALK_STACKFRAME  0
 #else
 #define GATOR_KERNEL_UNWINDING_USE_WALK_STACKFRAME  1
@@ -65,6 +71,9 @@ static int report_trace(struct stackframe *frame, void *d)
 #else
               (unsigned long)mod->core_layout.base;
 #endif
+        }
+        else {
+            cookie = NO_COOKIE;
         }
 #endif
         marshal_backtrace(addr & ~1, cookie, 1);
@@ -128,6 +137,9 @@ static void report_trace(unsigned int cpu, struct stack_trace * trace)
 #else
               (unsigned long) mod->core_layout.base;
 #endif
+        }
+        else {
+            cookie = NO_COOKIE;
         }
 #endif
         marshal_backtrace(addr & ~1, cookie, 1);
@@ -251,7 +263,7 @@ static void arm_backtrace_eabi(int cpu, struct pt_regs *const regs, unsigned int
         return;
 
     while (depth-- && curr) {
-        if (!access_ok(VERIFY_READ, curr, sizeof(struct stack_frame_eabi)) ||
+        if (!GATOR_ACCESS_OK(VERIFY_READ, curr, sizeof(struct stack_frame_eabi)) ||
                 __copy_from_user_inatomic(&bufcurr, curr, sizeof(struct stack_frame_eabi))) {
             return;
         }

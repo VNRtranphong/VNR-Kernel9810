@@ -1209,7 +1209,11 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
 	int ret = -ESRCH;
 
 #ifdef CONFIG_SAMSUNG_FREECESS
-	if ((sig == SIGKILL || sig == SIGTERM || sig == SIGABRT || sig == SIGQUIT)) 
+	/*
+	 * System will send SIGIO to the app that locked the file when other apps access the file.
+	 * Report SIGIO to prevent other apps from getting stuck
+	 */
+	if ((sig == SIGKILL || sig == SIGTERM || sig == SIGABRT || sig == SIGQUIT || sig == SIGIO))
 		sig_report(current, p);
 	
 #endif
@@ -1682,7 +1686,7 @@ bool do_notify_parent(struct task_struct *tsk, int sig)
 		 * This is only possible if parent == real_parent.
 		 * Check if it has changed security domain.
 		 */
-		if (tsk->parent_exec_id != tsk->parent->self_exec_id)
+		if (tsk->parent_exec_id != READ_ONCE(tsk->parent->self_exec_id))
 			sig = SIGCHLD;
 	}
 

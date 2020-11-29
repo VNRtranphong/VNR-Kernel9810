@@ -43,7 +43,7 @@
 
 /*
  * Targeted preemption latency for CPU-bound tasks:
- * (default: 6ms * (1 + ilog(ncpus)), units: nanoseconds)
+ * (default: 5ms * (1 + ilog(ncpus)), units: nanoseconds)
  *
  * NOTE: this latency value is not the same as the concept of
  * 'timeslice length' - timeslices in CFS are of variable length
@@ -53,8 +53,8 @@
  * (to see the precise effective timeslice length of your workload,
  *  run vmstat and monitor the context-switches (cs) field)
  */
-unsigned int sysctl_sched_latency = 6000000ULL;
-unsigned int normalized_sysctl_sched_latency = 6000000ULL;
+unsigned int sysctl_sched_latency = 5000000ULL;
+unsigned int normalized_sysctl_sched_latency = 5000000ULL;
 
 unsigned int sysctl_sched_sync_hint_enable = 1;
 unsigned int sysctl_sched_initial_task_util = 0;
@@ -82,13 +82,13 @@ enum sched_tunable_scaling sysctl_sched_tunable_scaling
  * Minimal preemption granularity for CPU-bound tasks:
  * (default: 0.75 msec * (1 + ilog(ncpus)), units: nanoseconds)
  */
-unsigned int sysctl_sched_min_granularity = 750000ULL;
-unsigned int normalized_sysctl_sched_min_granularity = 750000ULL;
+unsigned int sysctl_sched_min_granularity = 500000ULL;
+unsigned int normalized_sysctl_sched_min_granularity = 500000ULL;
 
 /*
  * is kept at sysctl_sched_latency / sysctl_sched_min_granularity
  */
-static unsigned int sched_nr_latency = 8;
+static unsigned int sched_nr_latency = 6;
 
 /*
  * After fork, child runs first. If set to 0 (default) then
@@ -127,7 +127,7 @@ unsigned int __read_mostly sysctl_sched_shares_window = 10000000UL;
  *
  * default: 5 msec, units: microseconds
   */
-unsigned int sysctl_sched_cfs_bandwidth_slice = 5000UL;
+unsigned int sysctl_sched_cfs_bandwidth_slice = 4000UL;
 #endif
 
 /*
@@ -2583,7 +2583,7 @@ void task_tick_numa(struct rq *rq, struct task_struct *curr)
 	/*
 	 * We don't care about NUMA placement if we don't have memory.
 	 */
-	if (!curr->mm || (curr->flags & PF_EXITING) || work->next != work)
+	if ((curr->flags & (PF_EXITING | PF_KTHREAD)) || work->next != work)
 		return;
 
 	/*
@@ -3288,6 +3288,7 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
  */
 #define UPDATE_TG	0x1
 #define SKIP_AGE_LOAD	0x2
+#define SKIP_CPUFREQ	0x4
 
 /* Update task and its cfs_rq load average */
 static inline void update_load_avg(struct sched_entity *se, int flags)
@@ -3309,7 +3310,7 @@ static inline void update_load_avg(struct sched_entity *se, int flags)
 			  cfs_rq->curr == se, NULL);
 	}
 
-	decayed  = update_cfs_rq_load_avg(now, cfs_rq, true);
+	decayed  = update_cfs_rq_load_avg(now, cfs_rq, !(flags & SKIP_CPUFREQ));
 	decayed |= propagate_entity_load_avg(se);
 
 	if (decayed && (flags & UPDATE_TG))
@@ -3468,6 +3469,7 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
 
 #define UPDATE_TG	0x0
 #define SKIP_AGE_LOAD	0x0
+#define SKIP_CPUFREQ	0x0
 
 static inline void update_load_avg(struct sched_entity *se, int not_used1)
 {
@@ -3704,6 +3706,8 @@ static __always_inline void return_cfs_rq_runtime(struct cfs_rq *cfs_rq);
 static void
 dequeue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 {
+	int update_flags;
+
 	/*
 	 * Update run-time statistics of the 'current'.
 	 */
@@ -3717,7 +3721,12 @@ dequeue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 	 *   - For group entity, update its weight to reflect the new share
 	 *     of its group cfs_rq.
 	 */
-	update_load_avg(se, UPDATE_TG);
+	update_flags = UPDATE_TG;
+
+	if (flags & DEQUEUE_IDLE)
+		update_flags |= SKIP_CPUFREQ;
+
+	update_load_avg(se, update_flags);
 	dequeue_entity_load_avg(cfs_rq, se);
 
 	update_stats_dequeue(cfs_rq, se, flags);
@@ -4822,6 +4831,14 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	if (p->in_iowait)
 		cpufreq_update_this_cpu(rq, SCHED_CPUFREQ_IOWAIT);
 
+	/*
+	 * If in_iowait is set, the code below may not trigger any cpufreq
+	 * utilization updates, so do it here explicitly with the IOWAIT flag
+	 * passed.
+	 */
+	if (p->in_iowait)
+		cpufreq_update_this_cpu(rq, SCHED_CPUFREQ_IOWAIT);
+
 	for_each_sched_entity(se) {
 		if (se->on_rq)
 			break;
@@ -4914,6 +4931,9 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	struct sched_entity *se = &p->se;
 	int task_sleep = flags & DEQUEUE_SLEEP;
 
+	if (task_sleep && rq->nr_running == 1)
+		flags |= DEQUEUE_IDLE;
+
 	for_each_sched_entity(se) {
 		cfs_rq = cfs_rq_of(se);
 		dequeue_entity(cfs_rq, se, flags);
@@ -4945,6 +4965,8 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	}
 
 	for_each_sched_entity(se) {
+		int update_flags;
+		
 		cfs_rq = cfs_rq_of(se);
 		cfs_rq->h_nr_running--;
 		walt_dec_cfs_cumulative_runnable_avg(cfs_rq, p);
@@ -4952,7 +4974,12 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		if (cfs_rq_throttled(cfs_rq))
 			break;
 
-		update_load_avg(se, UPDATE_TG);
+		update_flags = UPDATE_TG;
+
+		if (flags & DEQUEUE_IDLE)
+			update_flags |= SKIP_CPUFREQ;
+
+		update_load_avg(se, update_flags);
 		update_cfs_shares(se);
 	}
 
@@ -6764,8 +6791,9 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 				 * IOW, prefer a deep IDLE LITTLE CPU vs a
 				 * shallow idle big CPU.
 				 */
-				if (sysctl_sched_cstate_aware &&
-				    best_idle_cstate <= idle_idx)
+				if ((capacity_orig == target_capacity) &&
+				    sysctl_sched_cstate_aware &&
+				    (best_idle_cstate <= idle_idx))
 					continue;
 
 				/* Keep track of best idle CPU */
@@ -6800,7 +6828,8 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 				continue;
 
 			/* Favor CPUs with maximum spare capacity */
-			if ((capacity_orig - new_util) < target_max_spare_cap)
+			if ((capacity_orig == target_capacity) &&
+			    ((capacity_orig - new_util) < target_max_spare_cap))
 				continue;
 
 			target_max_spare_cap = capacity_orig - new_util;
@@ -7940,7 +7969,15 @@ static int detach_tasks(struct lb_env *env)
 		if (!can_migrate_task(p, env))
 			goto next;
 
-		load = task_h_load(p);
+		/*
+		 * Depending of the number of CPUs and tasks and the
+		 * cgroup hierarchy, task_h_load() can return a null
+		 * value. Make sure that env->imbalance decreases
+		 * otherwise detach_tasks() will stop only after
+		 * detaching up to loop_max tasks.
+		 */
+		load = max_t(unsigned long, task_h_load(p), 1);
+
 
 		if (sched_feat(LB_MIN) && load < 16 && !env->sd->nr_balance_failed)
 			goto next;
@@ -9906,6 +9943,10 @@ void nohz_balance_enter_idle(int cpu)
 	if (!cpu_active(cpu))
 		return;
 
+	/* Spare idle load balancing on CPUs that don't want to be disturbed: */
+	if (!is_housekeeping_cpu(cpu))
+		return;
+
 	if (test_bit(NOHZ_TICK_STOPPED, nohz_flags(cpu)))
 		return;
 
@@ -10148,12 +10189,12 @@ static inline bool nohz_kick_needed(struct rq *rq)
 		return true;
 
 	/* Do idle load balance if there have misfit task */
-	if (energy_aware() && rq->misfit_task)
-		return true;
+	if (energy_aware())
+		return rq->misfit_task;
 
 	rcu_read_lock();
 	sds = rcu_dereference(per_cpu(sd_llc_shared, cpu));
-	if (sds && !energy_aware()) {
+	if (sds) {
 		/*
 		 * XXX: write a coherent comment on why we do this.
 		 * See also: http://lkml.kernel.org/r/20111202010832.602203411@sbsiddha-desk.sc.intel.com

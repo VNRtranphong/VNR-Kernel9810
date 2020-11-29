@@ -1,0 +1,74 @@
+ui_print("  ");
+ui_print("  ");
+ui_print("  ");
+ui_print(" ++++++++++++++++++++++++++++++++++++++++++++++  ");
+ui_print("Kernel source git exynos-linux-stable");
+
+ui_print(" * * * * * * * * * * * * * * * * *****");
+ui_print("              VietNam VNR TEAM®       ");
+ui_print("               Kernel-VNR V8.0        ");
+ui_print("               Linux 4.9.240          ");
+ui_print("   Samsung open source N960FXXU6FTJ3  ");
+ui_print("              S9/S9+/N9 Kernel        ");
+ui_print("                    by                ");
+ui_print("                 TranPhong            ");
+ui_print(" * * * * * * * * * * * * * * * * *****");
+ui_print("  ");
+ui_print("  ");
+ui_print(" ++++++++++++++++++++++++++++++++++++++++++++++  ");
+#UNMOUNT
+ui_print(" ");
+ui_print("@ Mounting partitions...");	
+ifelse(is_mounted("/system"), unmount("/system"));
+ifelse(is_mounted("/odm"), unmount("/odm"));
+ifelse(is_mounted("/vendor"), unmount("/vendor"));
+
+mount("ext4", "EMMC", "/dev/block/platform/11120000.ufs/by-name/SYSTEM", "/system");
+mount("ext4", "EMMC", "/dev/block/platform/11120000.ufs/by-name/ODM", "/odm");
+mount("ext4", "EMMC", "/dev/block/platform/11120000.ufs/by-name/VENDOR", "/vendor");
+
+ui_print("Installing...");
+
+if is_substring("N960", getprop("ro.boot.bootloader")) then
+	ui_print("@ Extract Samsung Galaxy Note 9 Kernel...");
+	assert(package_extract_file("crownlte-eur.img", "/dev/block/platform/11120000.ufs/by-name/BOOT"));
+	sleep(1);
+endif;
+
+
+if is_substring("G960", getprop("ro.boot.bootloader")) then
+	ui_print("@ Extract Samsung Galaxy S9 Kernel...");
+	assert(package_extract_file("starlte-eur.img", "/dev/block/platform/11120000.ufs/by-name/BOOT"));
+	sleep(1);
+endif;
+
+if is_substring("G965", getprop("ro.boot.bootloader")) then	
+	ui_print("@ Extract Samsung Galaxy S9 Plus Kernel...");
+	assert(package_extract_file("star2lte-eur.img", "/dev/block/platform/11120000.ufs/by-name/BOOT"));
+	sleep(1);
+endif;
+
+ui_print("@ Extract magisk...");
+package_extract_dir("noverity/magisk", "/tmp/magisk");
+run_program("/sbin/busybox", "unzip", "/tmp/magisk/magisk.zip", "META-INF/com/google/android/*", "-d", "/tmp/magisk");
+run_program("/sbin/busybox", "sh", "/tmp/magisk/META-INF/com/google/android/update-binary", "dummy", "1", "/tmp/magisk/magisk.zip");
+run_program("/sbin/sleep", "2");
+
+ui_print(" ");
+delete("vendor/app/mcRegistry/ffffffffd0000000000000000000000a.tlbin");
+delete("vendor/app/mcRegistry/ffffffffd00000000000000000000062.tlbin");
+delete("vendor/bin/vaultkeeperd");
+
+delete_recursive("/data/tmp");
+
+ui_print("Done");
+#UNMOUNT
+ui_print("@ UNMOUNT partitions...");	
+ifelse(is_mounted("/system"), unmount("/system"));
+ifelse(is_mounted("/odm"), unmount("/odm"));
+ifelse(is_mounted("/vendor"), unmount("/vendor"));
+set_progress(1.00);
+ui_print("Done!");
+ui_print(" ++++++++++++++++++++++++++++++++++++++++++++++  ");
+ui_print("     COMPLETED SUCCESSFULLY         			   ");
+ui_print(" ++++++++++++++++++++++++++++++++++++++++++++++  "); 
