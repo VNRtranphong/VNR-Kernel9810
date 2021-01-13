@@ -13,11 +13,13 @@ export BUILD_CROSS_COMPILE=/home/tranphong/VNR-Kernel/aarch64-linux-android-4.9/
 export BUILD_JOB_NUMBER=128
 
 	
-VNR_NAME="V10.Kernel.VNR."	
-VNR_VER="VietNamⓇ - V10"
+VNR_NAME="R1.Kernel.VNR."	
+VNR_VER="VietNamⓇ.ONEUI 3.0 - R1"
 VNR_SP="N960X.G965X.G960X"
 VNR_ZIP="$VNR_NAME$VNR_SP"
 VNR_Z=".zip"
+VNR_PLATFORM=11.0.0
+
 
 RDIR=$(pwd)
 OUTDIR=$RDIR/arch/arm64/boot
@@ -26,7 +28,7 @@ DTBDIR=$OUTDIR/dtb
 DTCTOOL=$RDIR/tools/mkdtimage
 INCDIR=$RDIR/include
 
-MAINDIR=/home/tranphong/1.VNR-TEAM/VNR-Kernel/9810-Kernel
+MAINDIR=/home/tranphong/1.VNR-TEAM/VNR-Kernel/VNR-Kernel9810
 
 KERNEL_DEFCONFIGN9=exynos9810-crownlte_defconfig
 
@@ -57,8 +59,8 @@ function FUNC_BUILD_KERNELN9
         echo "=============================================="
         echo "N9 KERNEL"
         echo "build common config="$KERNEL_DEFCONFIGN9 ""
-
-	export ANDROID_MAJOR_VERSION=q
+	export PLATFORM_VERSION=$VNR_PLATFORM
+	export ANDROID_MAJOR_VERSION=r
 	export LOCALVERSION=-$VNR_VER
 	MODEL=crownlte
 
