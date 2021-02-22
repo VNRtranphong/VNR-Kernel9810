@@ -1,1 +1,1 @@
-androidboot.selinux=permissive
+androidboot.selinux=enforce androidboot.selinux=enforce

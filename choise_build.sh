@@ -9,7 +9,7 @@ restore='\033[0m'
 
 export VARIANT=eur	
 export ARCH=arm64
-export BUILD_CROSS_COMPILE=/home/tranphong/VNR-Kernel/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+export BUILD_CROSS_COMPILE=/home/tranphong/1.VNR/Toolchian/aarch64-linux-android-4.9/bin/aarch64-linux-android-
 export BUILD_JOB_NUMBER=128
 
 	
@@ -18,7 +18,7 @@ VNR_VER="VietNamⓇ.ONEUI 3.0 - R1"
 VNR_SP="N960X.G965X.G960X"
 VNR_ZIP="$VNR_NAME$VNR_SP"
 VNR_Z=".zip"
-VNR_PLATFORM=10.0.0
+VNR_PLATFORM=11
 
 
 RDIR=$(pwd)
@@ -60,7 +60,7 @@ function FUNC_BUILD_KERNELN9
         echo "N9 KERNEL"
         echo "build common config="$KERNEL_DEFCONFIGN9 ""
 	export PLATFORM_VERSION=$VNR_PLATFORM
-	export ANDROID_MAJOR_VERSION=q
+	export ANDROID_MAJOR_VERSION=r
 	export LOCALVERSION=-$VNR_VER
 	MODEL=crownlte
 

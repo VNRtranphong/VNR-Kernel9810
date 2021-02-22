@@ -9,17 +9,16 @@ restore='\033[0m'
 
 export VARIANT=eur	
 export ARCH=arm64
-export BUILD_CROSS_COMPILE=/home/tranphong/VNR-Kernel/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+export BUILD_CROSS_COMPILE=/home/tranphong/1.VNR/Toolchian/aarch64-linux-android-4.9/bin/aarch64-linux-android-
 export BUILD_JOB_NUMBER=128
 
 	
 VNR_NAME="R1.Kernel.VNR."	
-VNR_VER="VietNamⓇ.ONEUI 3.0 - R1"
+VNR_VER="VietNamⓇ Covid v1"
 VNR_SP="N960X.G965X.G960X"
 VNR_ZIP="$VNR_NAME$VNR_SP"
 VNR_Z=".zip"
 VNR_PLATFORM=10.0.0
-
 
 RDIR=$(pwd)
 OUTDIR=$RDIR/arch/arm64/boot
@@ -28,7 +27,7 @@ DTBDIR=$OUTDIR/dtb
 DTCTOOL=$RDIR/tools/mkdtimage
 INCDIR=$RDIR/include
 
-MAINDIR=/home/tranphong/1.VNR-TEAM/VNR-Kernel/VNR-Kernel9810
+MAINDIR=/home/tranphong/1.VNR/Kernel/VNR-Kernel9810
 
 KERNEL_DEFCONFIGN9=exynos9810-crownlte_defconfig
 
@@ -79,12 +78,12 @@ function FUNC_BUILD_KERNELN9
 	mv $RDIR/arch/$ARCH/boot/Image $RDIR/arch/$ARCH/boot/boot.img-zImage
 	mv $RDIR/arch/$ARCH/boot/dtb.img $RDIR/arch/$ARCH/boot/boot.img-dt
 
-			rm -f $RDIR/ramdisk/30UIN9/split_img/boot.img-zImage
-			rm -f $RDIR/ramdisk/30UIN9/split_img/boot.img-dt
-			mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $RDIR/ramdisk/30UIN9/split_img/boot.img-zImage
-			mv -f $RDIR/arch/$ARCH/boot/boot.img-dt $RDIR/ramdisk/30UIN9/split_img/boot.img-dt
+			rm -f $RDIR/ramdisk/N960/split_img/boot.img-zImage
+			rm -f $RDIR/ramdisk/N960/split_img/boot.img-dt
+			mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $RDIR/ramdisk/N960/split_img/boot.img-zImage
+			mv -f $RDIR/arch/$ARCH/boot/boot.img-dt $RDIR/ramdisk/N960/split_img/boot.img-dt
 			
-			cd $RDIR/ramdisk/30UIN9
+			cd $RDIR/ramdisk/N960
 			./repackimg.sh --nosudo
 			echo SEANDROIDENFORCE >> image-new.img
 
@@ -94,7 +93,7 @@ function FUNC_BUILD_KERNELN9
 			cd $RDIR/ramdisk/build
 			rm $MODEL-$VARIANT.img
 
-			mv -f $RDIR/ramdisk/30UIN9/image-new.img $RDIR/ramdisk/build/$MODEL-$VARIANT.imgg
+			mv -f $RDIR/ramdisk/N960/image-new.img $RDIR/ramdisk/build/$MODEL-$VARIANT.img10
 			cd $MAINDIR
 
 			
@@ -113,7 +112,7 @@ function FUNC_BUILD_KERNELS9
         echo "=============================================="
         echo "N9 KERNEL"
         echo "build common config="$KERNEL_DEFCONFIGN9 ""
-	export PLATFORM_VERSION=11.0.0
+	export PLATFORM_VERSION=11
 	export ANDROID_MAJOR_VERSION=r
 	export LOCALVERSION=-$VNR_VER
 	MODEL=crownlte
@@ -133,12 +132,12 @@ function FUNC_BUILD_KERNELS9
 	mv $RDIR/arch/$ARCH/boot/Image $RDIR/arch/$ARCH/boot/boot.img-zImage
 	mv $RDIR/arch/$ARCH/boot/dtb.img $RDIR/arch/$ARCH/boot/boot.img-dt
 
-			rm -f $RDIR/ramdisk/30UI/split_img/boot.img-zImage
-			rm -f $RDIR/ramdisk/30UI/split_img/boot.img-dt
-			mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $RDIR/ramdisk/30UI/split_img/boot.img-zImage
-			mv -f $RDIR/arch/$ARCH/boot/boot.img-dt $RDIR/ramdisk/30UI/split_img/boot.img-dt
+			rm -f $RDIR/ramdisk/N960/split_img/boot.img-zImage
+			rm -f $RDIR/ramdisk/N960/split_img/boot.img-dt
+			mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $RDIR/ramdisk/N960/split_img/boot.img-zImage
+			mv -f $RDIR/arch/$ARCH/boot/boot.img-dt $RDIR/ramdisk/N960/split_img/boot.img-dt
 			
-			cd $RDIR/ramdisk/30UI
+			cd $RDIR/ramdisk/N960
 			./repackimg.sh --nosudo
 			echo SEANDROIDENFORCE >> image-new.img
 
@@ -148,7 +147,7 @@ function FUNC_BUILD_KERNELS9
 			cd $RDIR/ramdisk/build
 			rm $MODEL-$VARIANT.img
 
-			mv -f $RDIR/ramdisk/30UI/image-new.img $RDIR/ramdisk/build/$MODEL-$VARIANT.img
+			mv -f $RDIR/ramdisk/N960/image-new.img $RDIR/ramdisk/build/$MODEL-$VARIANT.img11
 			cd $MAINDIR
 
 			
