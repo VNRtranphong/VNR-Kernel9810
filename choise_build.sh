@@ -14,7 +14,7 @@ export BUILD_JOB_NUMBER=128
 
 	
 VNR_NAME="R1.Kernel.VNR."	
-VNR_VER="VietNamⓇ.ONEUI 3.0 - R1"
+VNR_VER="VietNamⓇ.test"
 VNR_SP="N960X.G965X.G960X"
 VNR_ZIP="$VNR_NAME$VNR_SP"
 VNR_Z=".zip"
@@ -28,7 +28,7 @@ DTBDIR=$OUTDIR/dtb
 DTCTOOL=$RDIR/tools/mkdtimage
 INCDIR=$RDIR/include
 
-MAINDIR=/home/tranphong/1.VNR-TEAM/VNR-Kernel/VNR-Kernel9810
+MAINDIR=/home/tranphong/1.VNR/Kernel/VNR-Kernel9810
 
 KERNEL_DEFCONFIGN9=exynos9810-crownlte_defconfig
 
@@ -116,7 +116,7 @@ function FUNC_BUILD_KERNELS9
 
 	echo -e "${red}"; echo -e "${blink_red}"; echo "Make IMAGE"; echo -e "${restore}";
 
-	export ANDROID_MAJOR_VERSION=q
+	export ANDROID_MAJOR_VERSION=r
 	export LOCALVERSION=-$VNR_VER
 	make -j$BUILD_JOB_NUMBER ARCH=$ARCH \
 			CROSS_COMPILE=$BUILD_CROSS_COMPILE \
@@ -164,7 +164,7 @@ function FUNC_BUILD_KERNELS9P
         echo "S9P KERNEL"
         echo "build common config="$KERNEL_DEFCONFIGS9P ""
 
-	export ANDROID_MAJOR_VERSION=q
+	export ANDROID_MAJOR_VERSION=r
 	export LOCALVERSION=-$VNR_VER
 	MODEL=star2lte
 	
