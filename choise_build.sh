@@ -9,16 +9,16 @@ restore='\033[0m'
 
 export VARIANT=eur	
 export ARCH=arm64
-export BUILD_CROSS_COMPILE=/home/tranphong/1.VNR/Toolchian/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+export BUILD_CROSS_COMPILE=/home/tranphong/0.VNR/toolchian/aarch64-linux-android-4.9/bin/aarch64-linux-android-
 export BUILD_JOB_NUMBER=128
 
 	
 VNR_NAME="R1.Kernel.VNR."	
-VNR_VER="VietNamⓇ.test"
+VNR_VER="VietNamⓇ.nCoV-V1"
 VNR_SP="N960X.G965X.G960X"
 VNR_ZIP="$VNR_NAME$VNR_SP"
 VNR_Z=".zip"
-VNR_PLATFORM=11
+VNR_PLATFORM=10.0.0
 
 
 RDIR=$(pwd)
@@ -28,7 +28,7 @@ DTBDIR=$OUTDIR/dtb
 DTCTOOL=$RDIR/tools/mkdtimage
 INCDIR=$RDIR/include
 
-MAINDIR=/home/tranphong/1.VNR/Kernel/VNR-Kernel9810
+MAINDIR=/home/tranphong/0.VNR/Kernle/VNR-Kernel9810
 
 KERNEL_DEFCONFIGN9=exynos9810-crownlte_defconfig
 
@@ -43,6 +43,7 @@ function FUNC_CLEAN_DTB
 	else
 		echo "rm files in : "$RDIR/arch/$ARCH/boot/dts/*.dtb""
 		rm $RDIR/arch/$ARCH/boot/dts/*.dtb
+		rm $RDIR/arch/arm64/boot/dts/exynos/*.dtb
 		rm $RDIR/arch/$ARCH/boot/dtb/*.dtb
 		rm $RDIR/arch/$ARCH/boot/boot.img-dtb
 		rm $RDIR/arch/$ARCH/boot/boot.img-zImage
@@ -60,7 +61,7 @@ function FUNC_BUILD_KERNELN9
         echo "N9 KERNEL"
         echo "build common config="$KERNEL_DEFCONFIGN9 ""
 	export PLATFORM_VERSION=$VNR_PLATFORM
-	export ANDROID_MAJOR_VERSION=r
+	export ANDROID_MAJOR_VERSION=q
 	export LOCALVERSION=-$VNR_VER
 	MODEL=crownlte
 
@@ -116,7 +117,7 @@ function FUNC_BUILD_KERNELS9
 
 	echo -e "${red}"; echo -e "${blink_red}"; echo "Make IMAGE"; echo -e "${restore}";
 
-	export ANDROID_MAJOR_VERSION=r
+	export ANDROID_MAJOR_VERSION=q
 	export LOCALVERSION=-$VNR_VER
 	make -j$BUILD_JOB_NUMBER ARCH=$ARCH \
 			CROSS_COMPILE=$BUILD_CROSS_COMPILE \
@@ -164,7 +165,7 @@ function FUNC_BUILD_KERNELS9P
         echo "S9P KERNEL"
         echo "build common config="$KERNEL_DEFCONFIGS9P ""
 
-	export ANDROID_MAJOR_VERSION=r
+	export ANDROID_MAJOR_VERSION=q
 	export LOCALVERSION=-$VNR_VER
 	MODEL=star2lte
 	
