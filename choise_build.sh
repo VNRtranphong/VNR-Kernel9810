@@ -9,12 +9,12 @@ restore='\033[0m'
 
 export VARIANT=eur	
 export ARCH=arm64
-export BUILD_CROSS_COMPILE=/home/tranphong/0.VNR/toolchian/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+export BUILD_CROSS_COMPILE=/home/tranphong/1.VNR/toolchian/bin/aarch64-linux-android-
 export BUILD_JOB_NUMBER=128
 
 	
 VNR_NAME="R1.Kernel.VNR."	
-VNR_VER="VietNamⓇ.nCoV-V1"
+VNR_VER="VietNamⓇ.nCoV-1"
 VNR_SP="N960X.G965X.G960X"
 VNR_ZIP="$VNR_NAME$VNR_SP"
 VNR_Z=".zip"
@@ -28,7 +28,7 @@ DTBDIR=$OUTDIR/dtb
 DTCTOOL=$RDIR/tools/mkdtimage
 INCDIR=$RDIR/include
 
-MAINDIR=/home/tranphong/0.VNR/Kernle/VNR-Kernel9810
+MAINDIR=/home/tranphong/1.VNR/Kernel/VNR-Kernel9810
 
 KERNEL_DEFCONFIGN9=exynos9810-crownlte_defconfig
 
