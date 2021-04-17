@@ -14,11 +14,11 @@ export BUILD_JOB_NUMBER=128
 
 	
 VNR_NAME="R1.Kernel.VNR."	
-VNR_VER="VietNamⓇ.nCoV-1"
+VNR_VER="VietNamⓇ.r26p0.nCoV-2"
 VNR_SP="N960X.G965X.G960X"
 VNR_ZIP="$VNR_NAME$VNR_SP"
 VNR_Z=".zip"
-VNR_PLATFORM=10.0.0
+VNR_PLATFORM=11
 
 
 RDIR=$(pwd)
@@ -61,7 +61,7 @@ function FUNC_BUILD_KERNELN9
         echo "N9 KERNEL"
         echo "build common config="$KERNEL_DEFCONFIGN9 ""
 	export PLATFORM_VERSION=$VNR_PLATFORM
-	export ANDROID_MAJOR_VERSION=q
+	export ANDROID_MAJOR_VERSION=r
 	export LOCALVERSION=-$VNR_VER
 	MODEL=crownlte
 
